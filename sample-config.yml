@@ -1,0 +1,60 @@
+
+general:
+  # Amount of servers to create.
+  servers: 2
+  # Good choices are (depending on the power required): cx11, cx21, cx31, cx41.
+  # More - https://www.hetzner.com/cloud
+  instance: "cx11"
+  # OS image, commented out because it's the default.
+  # image: "ubuntu-20.04"
+  # Hetzner.com token (https://docs.hetzner.cloud/#authentication).
+  token: null
+  # Second to wait for servers' initialization (setting it to less than
+  # 30 seconds will probably fail).
+  wait: 30
+  # Install mullvad vpn on the server (https://mullvad.net). Any account
+  # number is a unique id containing 16 digits as of February 2021.
+  # mullvad:
+  #   account: null
+
+vars:
+  # List of any args of yours, will be filled during config parsing, one per server.
+  my_list:
+    - "file1.txt"
+    - "file2.txt"
+
+commands:
+  # Basic server setup example. If command is simple we can just pass it as a string.
+  - "apt-get update && apt-get upgrade -qq -y"
+  # Learning to use formatting.
+  - command: 'export COOL_VAR="Hello {name}!"'
+    name: "World"  # Script will try to insert any non-keyword vars into 'command'.
+  - command: "mkdir -p {dir}"
+    dir: "/tmp/filestorage_ajsdnaf"  # Easier to copy this field.
+  - command: 'echo $COOL_VAR > {dir}/{it}'
+    dir: "/tmp/filestorage_ajsdnaf"  # Easier to copy this field.
+    use: "my_list"  # Will put one value from 'my_list' into 'it'.
+  # Remember that we are root on the server.
+  - command: "cp {dir}/{it} /{it}"
+    dir: "/tmp/filestorage_ajsdnaf"  # Easier to copy this field.
+    use: "my_list"
+    increment: false  # This way we get the same argument, as in command before. Defaults to 'True'.
+  - command: "cat /{it}"
+    use: "my_list"
+    increment: false  # This way we get the same argument, as in command before. Defaults to 'True'.
+    show: true  # We want to see output from this command!
+  # Last example:
+    # Report message. Server "index" is a builtin var that any message has access to.
+    # - command: "echo \"[Server #{index}] (ipv4='$(curl -s -4 ifconfig.io)', ipv6='$(curl -s -6 ifconfig.io)') finished deployement.\""
+    #   show: True  # Show output, off by default
+
+assertions:
+  # Sanity check. Another way to check output, but programatically
+  # and you may not be interested in the actual result.
+  - command: "cat /{it}"
+    use: "my_list"
+    increment: false  # This way we get the same argument, as in command before. Defaults to 'True'.
+    contains: "Hello "  # This is enough, so being compatible with any changed 'name' is good.
+    # We don't really want to see the result here, since we will get report message.
+    # show: true
+
