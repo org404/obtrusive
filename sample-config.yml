@@ -24,7 +24,7 @@ vars:
     - "file2.txt"
 
 commands:
-  # Basic server setup example. If command is simple we can just pass it as a string.
+  # Basic server setup example. If command is simple enough we can just pass it as a string.
   - "apt-get update && apt-get upgrade -qq -y"
   # Learning to use formatting.
   - command: 'export COOL_VAR="Hello {name}!"'
@@ -33,7 +33,7 @@ commands:
     dir: "/tmp/filestorage_ajsdnaf"  # Easier to copy this field.
   - command: 'echo $COOL_VAR > {dir}/{it}'
     dir: "/tmp/filestorage_ajsdnaf"  # Easier to copy this field.
-    use: "my_list"  # Will put one value from 'my_list' into 'it'.
+    use: "my_list"  # Will put 'next' value from 'my_list' into 'it'.
   # Remember that we are root on the server.
   - command: "cp {dir}/{it} /{it}"
     dir: "/tmp/filestorage_ajsdnaf"  # Easier to copy this field.
@@ -44,7 +44,7 @@ commands:
     increment: false  # This way we get the same argument, as in command before. Defaults to 'True'.
     show: true  # We want to see output from this command!
   # Last example:
-    # Report message. Server "index" is a builtin var that any message has access to.
+    # Report message. Server "index" is a builtin context variable that any message has access to.
     # - command: "echo \"[Server #{index}] (ipv4='$(curl -s -4 ifconfig.io)', ipv6='$(curl -s -6 ifconfig.io)') finished deployement.\""
     #   show: True  # Show output, off by default
 
