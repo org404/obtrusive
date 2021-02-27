@@ -1,6 +1,7 @@
 from .mullvad import run_mullvad, mullvad_assertions
 from hcloud.server_types.domain import ServerType
 from hcloud.images.domain import Image
+from collections import defaultdict
 from pexpect import pxssh, TIMEOUT
 from queue import Queue, Empty
 import threading
@@ -18,21 +19,26 @@ Q = Queue()
 
 
 class Runner:
-    # Content limiter
-    LIMITER = "-" * 55
+    # Content delimiter
+    DELIMITER = "-" * 55
     # A hack to sync writing
     NEEDS_NEW_LINE = False
     # Global indecies for config arrays
-    INDECIES = {}
+    INDECIES = defaultdict(lambda: -1)
 
     def __init__(self, host: str, user: str, password: str, path: str = "config.yml", context: dict = {}):
         self.host = host
         self.user = user
         self.password = password
+        # This is a main ssh client for running commands.
         self.p = pxssh.pxssh(
+            # Set timeout to 10 minutes, because commands like 'apt-get install' and/or
+            # 'bazel build' (depending on the arguments of course) tend to take very long.
             timeout = 600,
             options = {
+                # Avoid hostkey checking, since it's annoying to automate.
                 "StrictHostKeyChecking": "no",
+                # Avoid "changing key host" issue when recreating servers.
                 "UserKnownHostsFile": "/dev/null"
             },
         )
@@ -45,30 +51,34 @@ class Runner:
 
     @staticmethod
     def start_printer():
+        # This function is being run in the thread as daemon.
         def _printer():
+            # This is used to rewrite line with seconds count
             prev = None
+            # Seconds counter to add by the end of the line while executing.
+            # This works because we are using timeout and adding timeout period
+            # after each timeout.
             seconds = 0
             while True:
                 try:
-                    _text, new_line = Q.get(timeout=0.1)
+                    text, new_line = Q.get(timeout=0.1)
 
-                    text = _text
                     if new_line:
                         text += "\n"
                         prev = None
                     else:
-                        prev = _text
-                        
+                        prev = text
 
                     sys.stdout.write(text + "\r")
                     sys.stdout.flush()
+                    # If we got here, the timeout didn't throw an error, so
+                    # we definitely have a new line. Restart seconds counter.
                     Q.task_done()
                     seconds = 0
                 except Empty:
                     if prev:
                         sys.stdout.write(f"{prev} ... {round(seconds, 1)} s\r")
                         seconds += 0.1
-                    
         threading.Thread(target=_printer, daemon=True).start()
 
     @staticmethod
@@ -82,6 +92,7 @@ class Runner:
             config = yaml.load(conf, Loader=yaml.FullLoader)
         return config
 
+    # This is kinda terrible but I don't want to spend time on it
     def parse_config(self, path):
         config = self.read_config(path)
 
@@ -104,12 +115,8 @@ class Runner:
                     use = item["use"]
                     if use not in config.get("vars", []):
                         raise ValueError(f"Couldn't find '{use}' in vars!")
-                    if use not in self.INDECIES:
-                        self.INDECIES[use] = 0
-                        it = config["vars"][use][0]
-                    else:
-                        if item.get("increment", True): self.INDECIES[use] += 1
-                        it = config["vars"][use][self.INDECIES[use]]
+                    if item.get("increment", True): self.INDECIES[use] += 1
+                    it = config["vars"][use][self.INDECIES[use]]
                 else:
                     it = None
 
@@ -146,12 +153,8 @@ class Runner:
                     use = item["use"]
                     if use not in config.get("vars", []):
                         raise ValueError(f"Couldn't find '{use}' in vars!")
-                    if use not in self.INDECIES:
-                        self.INDECIES[use] = 0
-                        it = config["vars"][use][0]
-                    else:
-                        if item.get("increment", True): self.INDECIES[use] += 1
-                        it = config["vars"][use][self.INDECIES[use]]
+                    if item.get("increment", True): self.INDECIES[use] += 1
+                    it = config["vars"][use][self.INDECIES[use]]
                 else:
                     it = None
 
@@ -171,25 +174,31 @@ class Runner:
         return commands, assertions
 
     def sys_p(self, text: str, new_line: bool = False, prefix: str = "..."):
-        # We can't do this inline
+        # We can't/shouldn't do this inline.
         text = text.strip(" \n")
         index = self.context["index"]
-        prefix = "" if not prefix else prefix + " "
+        if prefix:
+            prefix += " "
 
         text = f"[Server #{index}] {prefix}{text}\033[K"
         Q.put((text, new_line))
 
     def cmd_out(self, cmd):
+        # For commands use special prefix
         self.sys_p(cmd, prefix = "~#:")
 
     def out(self):
         lines = []
-        for l in self.p.before.decode().split("\n"):
-            l = l.strip(" \n\r")
-            if l:
-                lines.append(l)
+
+        raw_lines = self.p.before.decode().split("\n")
+        for line in raw_lines:
+            # Make sure to strip all bad special symbols
+            line = line.strip(" \n\r")
+            if line:  lines.append(line)
+
         # First line is our command
-        command = lines.pop(0)
+        _command = lines.pop(0)
+
         # The last line is shell prompt
         for line in lines:
             self.sys_p(line, new_line = True)
@@ -198,13 +207,12 @@ class Runner:
         self.p.sendline(item["command"])
         await self.prompt()
 
+        # If "contains" keyword present, check if value is present in the command output
         if item["contains"]:
             if item["contains"] not in self.p.before.decode():
-                index = self.context["index"]
                 raise Exception(
-                    "[Server #{index}] Assertion Error: command output didn't contain \"{contains}\"".format(
-                        **self.context, contains=item["contains"],
-                    )
+                    "[Server #{index}] Assertion Error: command output didn't contain \"{contains}\""
+                    .format(**self.context, contains=item["contains"])
                 )
 
     @staticmethod
@@ -218,6 +226,8 @@ class Runner:
         print(f"[Server #{index}] IPv4: {response.server.public_net.ipv4.ip}. IPv6: {response.server.public_net.ipv6.ip}.")
         print(f"[Server #{index}] Root password: {response.root_password}.")
 
+        # Hetzner returns some actions, which we can wait for. They are useful, because
+        # they can help to know when the server started and ready for connection.
         actions = list()
         if response.action:       actions.append(response.action)
         if response.next_actions: actions.extend(response.next_actions)
@@ -231,16 +241,21 @@ class Runner:
     @classmethod
     async def create_server(cls, client, stype, image, index):
         loop = asyncio.get_event_loop()
+        # Running in executor because '.wait_until_finished' in hetzner api uses
+        # synchronous polling over network.
         resp = await loop.run_in_executor(None, cls._create_server, client, stype, image, index)
         return resp
 
     async def prompt(self):
+        # Using some prefilled parameters here.
         await self.p.expect([self.p.PROMPT, TIMEOUT], async_=True, timeout=self.p.timeout)
 
     async def expect(self, p, text):
+        # Prefilled asynchronous 'wait', using default timeout
         await p.expect(text, async_=True, timeout=self.p.timeout)
 
     async def deploy(self):
+        # Connecting as raw client and changing password. Hetzner enforces this.
         tmp = pexpect.spawn(f"ssh -tt -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {self.user}@{self.host}")
         await self.expect(tmp, "'s password")
         tmp.sendline(self.password)  # log in
@@ -285,7 +300,10 @@ class Runner:
 
         # Report about assertion-tests if there were any
         if self.assertions:
-            self.sys_p(f"Successfully ran {len(self.assertions)} assertions!", new_line = True, prefix = None)
+            self.sys_p(
+                f"Successfully ran {len(self.assertions)} assertions!",
+                new_line = True, prefix = ""
+            )
 
         self.p.logout()
 

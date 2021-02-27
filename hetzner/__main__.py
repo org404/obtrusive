@@ -8,13 +8,14 @@ import os
 
 
 async def start(server_tasks: list, sleep_for: int, user: str):
+    # Initiate runner class here
     Runner.start_printer()
     resp_list = await asyncio.gather(*server_tasks)
-    print(Runner.LIMITER)
+    print(Runner.DELIMITER)
     print(f"[Global] Sleeping for {sleep_for} seconds ...")
     await asyncio.sleep(sleep_for)
     # Draw line after sleep to make current action very clear
-    print(Runner.LIMITER)
+    print(Runner.DELIMITER)
     runners = [Runner(r.server.public_net.ipv4.ip, user, r.root_password, context = {"index": i}) for i, r in enumerate(resp_list)]
     coros = [r.deploy() for r in runners]
     return await asyncio.gather(*coros)
@@ -29,6 +30,7 @@ if not CONFIG.get("token"):
 
 # Create a client
 client = Client(token=CONFIG["token"])
+
 
 # Servers:
 # Taken from https://www.hetzner.com/cloud
@@ -70,6 +72,7 @@ if len(sys.argv) > 1 and (sys.argv[1] == "-d" or sys.argv[1] == "--delete"):
         print(f"Deleting server of ID {server.id} with name {server.name}.")
         server.delete()
         print(f"Deleted server with ID {server.id}!")
+# This is main path, server creation and command execution.
 else:
     start_t = time.time()
     # Number of servers to create.
@@ -79,10 +82,10 @@ else:
     else:
         N = int(CONFIG["servers"])
         print(f"[Global] Deploying {N} servers according to config.yml ...")
-        print(Runner.LIMITER)
+        print(Runner.DELIMITER)
 
     tasks = [Runner.create_server(client, TYPE, IMAGE, i) for i in range(N)]
     asyncio.run(start(tasks, SLEEP_PERIOD, USER))
-    print(Runner.LIMITER)
+    print(Runner.DELIMITER)
     print(f"[Global] Done in {round(time.time() - start_t, 2)} seconds!")
 
