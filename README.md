@@ -35,3 +35,14 @@ After execution we need to clean up the servers, so we don't get charged for the
 # Note: you can also use `--delete` flag
 python -m hetzner -d
 ```
+
+##### Config options
+**vars** namespace can contain any lists of items which can be used anywhere in the **commands** or **assertions** namespace with "use" keyword.  
+**commands** namespace:
+* command: a string which contains a command to be executed through terminal connection.
+* show: a boolean which defined whether output of the command should be displayed on the screen.
+* use: a name of "vars" list as a string that is used to get a value from a list with auto-incremented index. Will give an error on the config-parsing stage if list is too small (index out of range).
+* increment: a boolean that is dependent on the "use" keyword; default is "true"; if increment is "false", auto-increment will be delayed, and you will get the same value as in previous command.
+**assertions** namespace supports **commands**' keywords and additionally:
+* contains: a string that must be in the output of the according command for assertion to pass.
+*Important Note: any other keywords added in the config, that are not recognized as a special keywords, will be passed to the "format" function as a context vars. Which means you can easily isolate sensitive data from links or any other commands. For usage example see "sample-config.yml"*
