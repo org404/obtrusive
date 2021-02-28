@@ -1,11 +1,19 @@
+### Tool description
+Obtrusive is a multiclient, multivictim DOS fleet for eth2 based on the prysm client.  
+  
+Features:
+* establishes adverserial connections to up to [N] clients (any *sane* N)
+* currently supports attacking Prysm, (Nimbus, Teku, Lighthouse)
+* rate limit conform
+* vpn support for rate limit circumvention
 
 ### Setup
 
 ##### Installation
 First, clone the repo and move into directory:
 ```
-git clone `url`
-cd `project`
+git clone `https://github.com/org404/obtrusive.git`
+cd `obtrusive`
 ```
 Setup python virtual environment:
 ```
@@ -24,7 +32,7 @@ Now, open the file with editor of your choice and fill your hetzner token.
 ##### Run
 You already can run the script and see how it goes. For that run:
 ```
-python -m hetzner
+python -m obtrusive
 ```
 When the execution finishes, you can open config file again and tweak some stuff or check what was executed.
 But you should finish reading through readme first.
@@ -33,7 +41,7 @@ But you should finish reading through readme first.
 After execution we need to clean up the servers, so we don't get charged for them:
 ```
 # Note: you can also use `--delete` flag
-python -m hetzner -d
+python -m obtrusive -d
 ```
 
 ##### Config options
