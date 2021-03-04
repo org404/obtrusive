@@ -1,10 +1,9 @@
 from typing import Generator, Tuple, Dict
 
-
 # By the default we expect bash return, otherwise if tuple is provided,
 # second argument will be an expected output string
 INSTALL_MULLVAD = (
-    "apt-get update && apt-get install -qq -y curl jq openresolv wireguard",
+    "apt-get update && apt-get install -qq -y curl jq openresolv wireguard docker.io",
     "curl -LO https://mullvad.net/media/files/mullvad-wg.sh",
     "chmod +x ./mullvad-wg.sh",
     # Here we expect to be asked for account number,
@@ -22,9 +21,28 @@ RUN_MULLVAD = (
     #   - "export NEW_WG={MULLVAD_SERVER}",
 
     # We can just randomly choose from all config files
-    "export NEW_WG=$(ls /etc/wireguard/ | shuf -n 1 | sed 's/\(.*\)\..*/\1/')",
-    "wg-quick up $NEW_WG",
-    "systemctl enable wg-quick@$NEW_WG",
+    r"export NEW_WG=$(ls /etc/wireguard/ | shuf -n 1 | sed 's/\(.*\)\..*/\1/')",
+    # "wg-quick up $NEW_WG",
+    # "systemctl enable wg-quick@$NEW_WG",
+    "mkdir -p /tmp/mullvad_config",
+    "cp /etc/wireguard/$NEW_WG.conf /tmp/mullvad_config/wg0.conf",
+    # Sleep command
+    "SLEEP_COMMAND",
+    "docker run -d \
+        --privileged \
+        --name={MULLVAD_DOCKER_NAME} \
+        --cap-add=NET_ADMIN \
+        --cap-add=SYS_MODULE \
+        -e PUID=1000 \
+        -e PGID=1000 \
+        -e TZ=Europe/London \
+        -p 51820:51820/udp \
+        -v /tmp/mullvad_config:/config \
+        -v /lib/modules:/lib/modules \
+        --sysctl=\"net.ipv4.conf.all.src_valid_mark=1\" \
+        --sysctl=\"net.ipv6.conf.all.disable_ipv6=0\" \
+        --restart unless-stopped \
+        ghcr.io/linuxserver/wireguard",
 )
 
 
@@ -32,7 +50,7 @@ COMMANDS = INSTALL_MULLVAD + RUN_MULLVAD
 
 
 ASSERTIONS = (
-    ("wg", "interface: "),
+    ("docker ps", "{MULLVAD_DOCKER_NAME}"),
 )
 
 
@@ -42,7 +60,7 @@ def run_mullvad(commands: tuple = COMMANDS, **kwargs) -> Generator[Tuple[str, st
             yield item.format(**kwargs), None
         elif isinstance(item, tuple):
             cmd, expect = item
-            yield cmd.format(**kwargs), expect
+            yield cmd.format(**kwargs), expect.format(**kwargs)
         else:
             raise NotImplementedError(f"Argument {item} is not supported!")
 
@@ -58,7 +76,7 @@ def mullvad_assertions(**kwargs) -> Generator[Dict[str, str], None, None]:
             cmd, expect = item
             yield {
                 "command": cmd.format(**kwargs),
-                "contains": expect
+                "contains": expect.format(**kwargs),
             }
         else:
             raise NotImplementedError(f"Argument {item} is not supported!")

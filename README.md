@@ -23,9 +23,9 @@ python -m pip install -r requirements.txt
 ```
 
 ##### Configuration
-Use sample file from the repo:
+Use sample file from the example folder:
 ```
-cp sample-config.yml config.yml
+cp examples/basic-config.yml config.yml
 ```
 Now, open the file with editor of your choice and fill your hetzner token.
 

@@ -12,6 +12,7 @@ import random
 import time
 import yaml
 import sys
+import os
 
 
 # Sync printing queue
@@ -25,6 +26,8 @@ class Runner:
     NEEDS_NEW_LINE = False
     # Global indecies for config arrays
     INDECIES = defaultdict(lambda: -1)
+    # If debug is enabled in config, before each command there is sleep.
+    DEBUG_SLEEP = 2
 
     def __init__(self, host: str, user: str, password: str, path: str = "config.yml", context: dict = {}):
         self.host = host
@@ -49,6 +52,10 @@ class Runner:
         self.commands, self.assertions = self.parse_config(self.path)
         self.loop = asyncio.get_event_loop()
 
+    async def debug_bp(self):
+        if self.config["general"].get("debug", False):
+            await asyncio.sleep(self.DEBUG_SLEEP)
+
     @staticmethod
     def start_printer():
         # This function is being run in the thread as daemon.
@@ -64,12 +71,18 @@ class Runner:
                     text, new_line = Q.get(timeout=0.1)
 
                     if new_line:
-                        text += "\n"
+                        suffix = "\n"
                         prev = None
                     else:
+                        suffix = ""
+                        # We have to truncate output here because lines over length of
+                        # the output terminal window works very poorly with \r lines.
+                        optimal_size = os.get_terminal_size().columns - 50
+                        if len(text) > optimal_size:
+                            text = text[:optimal_size] + "..[truncated]"
                         prev = text
 
-                    sys.stdout.write(text + "\r")
+                    sys.stdout.write(f"{text}\033[K\r{suffix}")
                     sys.stdout.flush()
                     # If we got here, the timeout didn't throw an error, so
                     # we definitely have a new line. Restart seconds counter.
@@ -77,7 +90,7 @@ class Runner:
                     seconds = 0
                 except Empty:
                     if prev:
-                        sys.stdout.write(f"{prev} ... {round(seconds, 1)} s\r")
+                        sys.stdout.write(f"{prev} ... {round(seconds, 1)} s\033[K\r")
                         seconds += 0.1
         # Starting daemon
         threading.Thread(target=_printer, daemon=True).start()
@@ -183,7 +196,7 @@ class Runner:
         if prefix:
             prefix += " "
 
-        text = f"[Server #{index}] {prefix}{text}\033[K"
+        text = f"[Server #{index}] {prefix}{text}"
         Q.put((text, new_line))
 
     def cmd_out(self, cmd):
@@ -277,17 +290,28 @@ class Runner:
         self.p.login(self.host, self.user, self.password)
 
         # If mullvad vpn is configured, we install/launch it first
-        if self.config["general"].get("mullvad", False):
-
+        mullvad = self.config["general"].get("mullvad", {})
+        if mullvad:
+            self.context["MULLVAD_ID"] = mullvad.get("account")
+            self.context["MULLVAD_DOCKER_NAME"] = mullvad.get("container", "poison-vpn")
             # TODO: Test this, this probably will drop connection when launching vpn
             for cmd, expect in run_mullvad(**self.context):
+                if cmd == "SLEEP_COMMAND":
+                    self.cmd_out("*Sleeping to let mullvad propagate wireguard keys*")
+                    await asyncio.sleep(30)
+                    continue
+
                 self.cmd_out(cmd)
                 self.p.sendline(cmd)
                 if expect:  await self.expect(self.p, expect)
                 else:       await self.prompt()
+                # If debug is enabled in config, this will sleep
+                await self.debug_bp()
 
             for item in mullvad_assertions(**self.context):
                 await self.do_assert(item)
+                # If debug is enabled in config, this will sleep
+                await self.debug_bp()
 
         # Running commands
         for item in self.commands:
@@ -295,11 +319,15 @@ class Runner:
             self.p.sendline(item["command"])
             await self.prompt()
             if item["show"]: self.out()
+            # If debug is enabled in config, this will sleep
+            await self.debug_bp()
     
         # Running assertions
         for item in self.assertions:
             await self.do_assert(item)
             if item["show"]: self.out()
+            # If debug is enabled in config, this will sleep
+            await self.debug_bp()
 
         # Report about assertion-tests if there were any
         if self.assertions:

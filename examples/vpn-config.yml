@@ -1,0 +1,38 @@
+
+general:
+  # Enables some sleep after each command.
+  # debug: true
+  # Amount of servers to create.
+  servers: 1
+  # Good choices are (depending on the power required): cx11, cx21, cx31, cx41.
+  # More - https://www.hetzner.com/cloud
+  instance: "cx11"
+  # OS image, commented out because it's the default.
+  # image: "ubuntu-20.04"
+  # Hetzner.com token (https://docs.hetzner.cloud/#authentication).
+  token: null
+  # Second to wait for servers' initialization (setting it to less than
+  # 30 seconds will probably fail).
+  wait: 30
+  # Install mullvad vpn on the server (https://mullvad.net). Any account
+  # number is a unique id containing 16 digits as of February 2021.
+  mullvad:
+    account: null
+    # Docker container name to use, default value
+    # container: "poison-vpn"
+
+vars:
+  # List of any args of yours, will be filled during config parsing, one per server.
+  my_list:
+    - "file1.txt"
+    - "file2.txt"
+
+commands:
+  # Basic server setup example. If command is simple we can just pass it as a string.
+  - "apt-get update && apt-get upgrade -qq -y && apt-get install -qq -y docker.io"
+  # Running docker with two different ips
+  - "docker pull curlimages/curl:7.75.0"
+  - command: "docker run --rm curlimages/curl:7.75.0 -s -4 ifconfig.io"
+    show: true
+  - command: "docker run --rm --network=container:poison-vpn curlimages/curl:7.75.0 -s -4 ifconfig.io"
+    show: true
