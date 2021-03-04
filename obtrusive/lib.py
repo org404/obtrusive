@@ -79,6 +79,7 @@ class Runner:
                     if prev:
                         sys.stdout.write(f"{prev} ... {round(seconds, 1)} s\r")
                         seconds += 0.1
+        # Starting daemon
         threading.Thread(target=_printer, daemon=True).start()
 
     @staticmethod
@@ -116,7 +117,8 @@ class Runner:
                     if use not in config.get("vars", []):
                         raise ValueError(f"Couldn't find '{use}' in vars!")
                     if item.get("increment", True): self.INDECIES[use] += 1
-                    it = config["vars"][use][self.INDECIES[use]]
+                    length = len(config["vars"][use])
+                    it = config["vars"][use][self.INDECIES[use] % length]
                 else:
                     it = None
 
@@ -154,7 +156,8 @@ class Runner:
                     if use not in config.get("vars", []):
                         raise ValueError(f"Couldn't find '{use}' in vars!")
                     if item.get("increment", True): self.INDECIES[use] += 1
-                    it = config["vars"][use][self.INDECIES[use]]
+                    length = len(config["vars"][use])
+                    it = config["vars"][use][self.INDECIES[use] % length]
                 else:
                     it = None
 

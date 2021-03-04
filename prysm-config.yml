@@ -1,0 +1,73 @@
+
+general:
+  # Amount of servers to create
+  servers: 6
+  # Good choices are (depending on the power required):
+  # - cx11 (2.96  €/m - 0.005 €/h - 1vCPU - 2GB RAM  - 20GB storage  - 20TB network cap - the cheapest option, could run any scripts)
+  # - cx21 (5.83  €/m - 0.010 €/h - 2vCPU - 4GB RAM  - 40GB storage  - 20TB network cap - medium, could probably run stripped client)
+  # - cx31 (10.59 €/m - 0.017 €/h - 2vCPU - 8GB RAM  - 80GB storage  - 20TB network cap - minimum specs by the Prysm team for full pledged client)
+  # - cx41 (18.92 €/m - 0.031 €/h - 4vCPU - 16GB RAM - 160GB storage - 20TB network cap - recommended specs by the Prysm team for full pledged client)
+  # More - https://www.hetzner.com/cloud
+  server_type: "cx41"
+  # Hetzner.com token (https://docs.hetzner.cloud/#authentication)
+  token: null
+  # Second to wait for servers' initialization (Don't change)
+  wait: 30
+  # Install mullvad vpn on the server (https://mullvad.net)
+  # Any account number is a unique id containing 16 digits as of February 2021
+  # mullvad:
+  #   account: null
+
+vars:
+  # List of tokens to use for goerli network. *One per server is used*!
+  # Comment out when rate limited
+  goerli:
+    - "@Edit: Your goerli token here."
+    - "@Edit: Your goerli token here."
+
+commands:
+  # Dependencies
+  - "apt-get update && apt-get upgrade -qq -y && apt-get install -qq -y docker.io golang git curl gnupg g++ unzip zip libncurses5 libgmp-dev libssl-dev"
+  # Bazel install
+  - "mkdir -p /usr/local/lib/bazel/bin"
+  - "cd /usr/local/lib/bazel/bin && curl -fsSLO https://releases.bazel.build/3.7.0/release/bazel-3.7.0-linux-x86_64 && chmod +x bazel-3.7.0-linux-x86_64 && cd /root"
+  - "ln -s /usr/local/lib/bazel/bin/bazel-3.7.0-linux-x86_64 /usr/bin/bazel"
+  # Clone the project, need to use username/password for private repo
+  - command: "git clone --depth 1 --branch \"{branch}\" {gh_url}"
+    branch: null
+    gh_url: null
+  - "cd prysm"
+  # Set target
+  - command: "export TARGET=/ip4/{target_ip}/tcp/{target_port}/p2p/{target_addr}"
+    target_ip: null
+    target_port: 13000
+    target_addr: null
+  # Set goerli url (one per container)
+  - command: "export GOERLI_URL={it}"
+    use: "goerli"  # this will put values provided in "vars.goerli" section into "it" variable inside string
+  # Set amount of instances to spin up
+  - "export N=5"
+  - "chmod +x exhaust.sh"
+  - "./exhaust.sh"
+  # Report message. Server "index" is a builtin var that any message has access to.
+  - command: "echo \"[Server #{index}] (ipv4='$(curl -s -4 ifconfig.io)', ipv6='$(curl -s -6 ifconfig.io)') finished deployement.\""
+    show: True  # Show output, off by default
+
+assertions:
+  # Sanity check, we look for 'exhaust.sh' in a cloned project
+  - command: "ls /root/prysm"
+    contains: "exhaust.sh"
+    # show: True  # Off by default
+  # Check if attackers are running
+  - command: "docker ps"
+    # show: True  # Off by default
+    contains: "attacker-1"
+  - command: "docker ps"
+    contains: "attacker-2"
+  - command: "docker ps"
+    contains: "attacker-3"
+  - command: "docker ps"
+    contains: "attacker-4"
+  - command: "docker ps"
+    contains: "attacker-5"
+
