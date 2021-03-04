@@ -12,8 +12,8 @@ Features:
 ##### Installation
 First, clone the repo and move into directory:
 ```
-git clone `https://github.com/org404/obtrusive.git`
-cd `obtrusive`
+git clone https://github.com/org404/obtrusive.git
+cd obtrusive
 ```
 Setup python virtual environment:
 ```

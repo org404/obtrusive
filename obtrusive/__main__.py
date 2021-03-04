@@ -11,11 +11,13 @@ async def start(server_tasks: list, sleep_for: int, user: str):
     # Initiate runner class here
     Runner.start_printer()
     resp_list = await asyncio.gather(*server_tasks)
+
     print(Runner.DELIMITER)
     print(f"[Global] Sleeping for {sleep_for} seconds ...")
     await asyncio.sleep(sleep_for)
     # Draw line after sleep to make current action very clear
     print(Runner.DELIMITER)
+
     runners = [Runner(r.server.public_net.ipv4.ip, user, r.root_password, context = {"index": i}) for i, r in enumerate(resp_list)]
     coros = [r.deploy() for r in runners]
     return await asyncio.gather(*coros)
