@@ -7,6 +7,7 @@ from queue import Queue, Empty
 import threading
 import pexpect
 import asyncio
+import mullvad
 import string
 import random
 import time
@@ -296,17 +297,7 @@ class Runner:
             self.context["MULLVAD_DOCKER_NAME"] = mullvad.get("container", "poison-vpn")
             # TODO: Test this, this probably will drop connection when launching vpn
             for cmd, expect in run_mullvad(**self.context):
-                if cmd == "SLEEP_COMMAND":
-                    self.cmd_out("*Sleeping to let mullvad propagate wireguard keys*")
-                    await asyncio.sleep(30)
-                    continue
-
-                self.cmd_out(cmd)
-                self.p.sendline(cmd)
-                if expect:  await self.expect(self.p, expect)
-                else:       await self.prompt()
-                # If debug is enabled in config, this will sleep
-                await self.debug_bp()
+                await self.exec_mullvad_cmd(cmd, expect)
 
             for item in mullvad_assertions(**self.context):
                 await self.do_assert(item)
@@ -315,6 +306,14 @@ class Runner:
 
         # Running commands
         for item in self.commands:
+            if cmd == "NEW_VPN_COMMAND":
+                mullvad_gen = run_mullvad(
+                    commands = mullvad.STOP_MULLVAD + mullvad.RUN_MULLVAD,
+                    **self.context,
+                )
+                for cmd, expect in mullvad_gen:
+                    await self.exec_mullvad_cmd(cmd, expect)
+
             self.cmd_out(item["command"])
             self.p.sendline(item["command"])
             await self.prompt()
@@ -337,4 +336,17 @@ class Runner:
             )
 
         self.p.logout()
+
+    async def exec_mullvad_cmd(self, cmd, expect):
+        if cmd == "SLEEP_COMMAND":
+            self.cmd_out("*Sleeping to let mullvad propagate wireguard keys*")
+            await asyncio.sleep(30)
+            return
+
+        self.cmd_out(cmd)
+        self.p.sendline(cmd)
+        if expect:  await self.expect(self.p, expect)
+        else:       await self.prompt()
+        # If debug is enabled in config, this will sleep
+        await self.debug_bp()
 

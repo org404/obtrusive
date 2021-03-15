@@ -13,6 +13,9 @@ INSTALL_MULLVAD = (
     "{MULLVAD_ID}",
 )
 
+STOP_MULLVAD = (
+    "docker stop {MULLVAD_DOCKER_NAME}"
+)
 
 RUN_MULLVAD = (
     # We can predefine which countries/servers we want
@@ -20,7 +23,25 @@ RUN_MULLVAD = (
     #   - "export NEW_WG=mullvad-gb19",
     #   - "export NEW_WG={MULLVAD_SERVER}",
 
+    #
     # We can just randomly choose from all config files
+    # Note: @Improvement
+    #     This is good for single time usage, but generally this is probably
+    #     a suboptimal solution for IP switching (chaning vpn) on fly, since
+    #     after about 50% of IPs swtiched we will be wasting a lot of time
+    #     trying to get new IP. Solution would be simple incremental id. Or,
+    #     at least, randomly choosing country, then incrementally trying all
+    #     available servers for that country. On top of that some cache must
+    #     be used in addition to incremental pick, so if was already used ->
+    #     go next IP/country.
+    #     On the other hand, if we are deploying in parallel, the obvious
+    #     problem is a collision of IPs (for example, two different servers
+    #     getting the same VPN IP and getting blocked immediatelly), which
+    #     is problematic too. Generating mullvad files locally and sending
+    #     them through 'scp' will solve that. In addition it might solve an
+    #     issue of 5-keys limit on the account.
+    #                                                     - andrew, March 15 2021
+    #
     r"export NEW_WG=$(ls /etc/wireguard/ | shuf -n 1 | sed 's/\(.*\)\..*/\1/')",
     # "wg-quick up $NEW_WG",
     # "systemctl enable wg-quick@$NEW_WG",
