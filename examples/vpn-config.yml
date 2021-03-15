@@ -21,12 +21,6 @@ general:
     # Docker container name to use, default value
     # container: "poison-vpn"
 
-vars:
-  # List of any args of yours, will be filled during config parsing, one per server.
-  my_list:
-    - "file1.txt"
-    - "file2.txt"
-
 commands:
   # Basic server setup example. If command is simple we can just pass it as a string.
   - "apt-get update && apt-get upgrade -qq -y && apt-get install -qq -y docker.io"
