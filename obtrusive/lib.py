@@ -1,4 +1,4 @@
-from .mullvad import run_mullvad, mullvad_assertions
+from .mullvad import run_mullvad, mullvad_assertions, STOP_MULLVAD, RUN_MULLVAD
 from hcloud.server_types.domain import ServerType
 from hcloud.images.domain import Image
 from collections import defaultdict
@@ -7,7 +7,6 @@ from queue import Queue, Empty
 import threading
 import pexpect
 import asyncio
-import mullvad
 import string
 import random
 import time
@@ -306,9 +305,9 @@ class Runner:
 
         # Running commands
         for item in self.commands:
-            if cmd == "NEW_VPN_COMMAND":
+            if item["command"] == "NEW_VPN_COMMAND":
                 mullvad_gen = run_mullvad(
-                    commands = mullvad.STOP_MULLVAD + mullvad.RUN_MULLVAD,
+                    commands = STOP_MULLVAD + RUN_MULLVAD,
                     **self.context,
                 )
                 for cmd, expect in mullvad_gen:
