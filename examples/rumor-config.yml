@@ -1,0 +1,65 @@
+
+general:
+  # Enables some sleep after each command.
+  # debug: true
+  # Amount of servers to create.
+  servers: 6
+  # Good choices are (depending on the power required): cx11, cx21, cx31, cx41.
+  # More - https://www.hetzner.com/cloud
+  instance: "cx21"
+  # OS image, commented out because it's the default.
+  # image: "ubuntu-20.04"
+  # Hetzner.com token (https://docs.hetzner.cloud/#authentication).
+  token: null
+  # Second to wait for servers' initialization (setting it to less than
+  # 30 seconds will probably fail).
+  wait: 30
+  # Install mullvad vpn on the server (https://mullvad.net). Any account
+  # number is a unique id containing 16 digits as of February 2021.
+  # mullvad:
+    # account: null
+    # Docker container name to use, defaults to 'poison-vpn'.
+    # container: "poison-vpn"
+
+commands:
+  # Some packages require manual input.
+  - "export DEBIAN_FRONTEND=noninteractive"
+  # Basic server setup example. If command is simple we can just pass it as a string.
+  - "apt-get update && apt-get upgrade -qq -y && apt-get install -qq -y docker.io python3.8 git"
+  #
+  # Note: @Credentials
+  #     This is used here to make git use your credentials for submodules. Be careful
+  #     with this, obtrusive creates safe password and doesn't save password anywhere
+  #     outside stdout, but if anyone gets access to the running instance, they can
+  #     read credentials from plaintext file, so still keep this in mind.
+  #                                                                - andrew, March 16 2021
+  - "git config --global credential.helper store"
+  # Clone our rumor fork with some additional scripts in this repo.
+  - command: "git clone --recurse-submodules -j4 https://{username}:{password}@github.com/org404/pyrum-scripts.git"
+    username: null
+    password: null
+  - "cd pyrum-scripts/rumor"
+  # Build rumor image
+  - "DOCKER_BUILDKIT=1 ./build.sh"
+  - "cd ../scripts"
+  # Here you set the victim's multiaddress.
+  - command: "export TADDRESS=\"{taddr}\""
+    taddr: null
+  # Here you set the victim's peer ID (last string in the multiaddress).
+  - command: "export TID=\"{tid}\""
+    tid: null
+  # In those two export variables you have to set current fork digest
+  # for the victim to allow our connection.
+  - command: "export FORK_DIGEST=\"{fork_digest}\""
+    fork_digest: "0x3b088795"
+  - command: "export FORK_DIGEST_NO_PREFIX=\"{fork_digest}\""
+    fork_digest: "3b088795"
+  #
+  # Note:
+  #     Running payload, sending it to the background so we finish execution immediatelly.
+  #     This has own pros/cons because we can't see what's the status on the script, so it
+  #     might easily fail silently. Maybe we could capture first N lines of logs and then
+  #     put it into the background job. Otherwise, we will need some much more complex way
+  #     to be able to monitor execution, but also disconnect anytime we need.
+  #                                                                     - andrew, March 16 2021
+  - "python3 attack.py &"
