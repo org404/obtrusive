@@ -18,7 +18,7 @@ cd obtrusive
 Setup python virtual environment:
 ```
 virtualenv -p python3.8 .venv
-source venv/bin/activate
+source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
