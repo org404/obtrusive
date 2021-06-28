@@ -14,7 +14,7 @@ general:
   # Second to wait for servers' initialization (Don't change)
   wait: 30
   # Install mullvad vpn on the server (https://mullvad.net)
-  # Any account number is a unique id containing 16 digits as of February 2021
+  # Any account number is a unique id containing 16 digits as of February 2021.
   # mullvad:
   #   account: null
 

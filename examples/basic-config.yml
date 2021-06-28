@@ -1,28 +1,34 @@
 
+# TODO: Allow definition of custom GLOBAL VARS and automatically try to apply them in the "format".
+# General configurations namespace, any global variables should be added (and implemented) from here.
 general:
   # Amount of servers to create.
   servers: 2
   # Good choices are (depending on the power required): cx11, cx21, cx31, cx41.
   # More - https://www.hetzner.com/cloud
   instance: "cx11"
-  # OS image, commented out because it's the default.
+  # OS image, commented out because ubuntu is the default (more: https://docs.hetzner.cloud/#images). TODO: support for own images?
   # image: "ubuntu-20.04"
   # Hetzner.com token (https://docs.hetzner.cloud/#authentication).
   token: null
-  # Second to wait for servers' initialization (setting it to less than
-  # 30 seconds will probably fail).
+  # Seconds to wait for servers' initialization (setting it to less than 30 seconds will probably fail).
   wait: 30
-  # Install mullvad vpn on the server (https://mullvad.net). Any account
-  # number is a unique id containing 16 digits as of February 2021.
+  # Activate to install mullvad vpn on the server (https://mullvad.net). Note: any account number is a unique
+  # id containing 16 digits as of February 2021. And account numbers are impossible to change, so if you have
+  # gotten your number compromised, you can only create a new one, so it's better to pay for the service monthly
+  # to minimize loses in that case.
   # mullvad:
   #   account: null
 
+# This namespace allows you to add arguments that will be sequentially used (per server or per command).
 vars:
-  # List of any args of yours, will be filled during config parsing, one per server.
+  # List of any args of yours, will be filled during config parsing.
   my_list:
     - "file1.txt"
     - "file2.txt"
 
+# TODO: Add support for multiple [vars] arguments through ability to rename variable in 'use' keyword.
+# Main commands:
 commands:
   # Basic server setup example. If command is simple enough we can just pass it as a string.
   - "apt-get update && apt-get upgrade -qq -y"
@@ -48,6 +54,7 @@ commands:
     # - command: "echo \"[Server #{index}] (ipv4='$(curl -s -4 ifconfig.io)', ipv6='$(curl -s -6 ifconfig.io)') finished deployement.\""
     #   show: True  # Show output, off by default
 
+# Automatic checks to verify that everything executed and we got expected result.
 assertions:
   # Sanity check. Another way to check output, but programatically
   # and you may not be interested in the actual result.

@@ -29,10 +29,11 @@ commands:
   #
   # Note: @Credentials
   #     This is used here to make git use your credentials for submodules. Be careful
-  #     with this, obtrusive creates safe password and doesn't save password anywhere
-  #     outside stdout, but if anyone gets access to the running instance, they can
-  #     read credentials from plaintext file, so still keep this in mind.
-  #                                                                - andrew, March 16 2021
+  #     with this, obtrusive creates safe password for created VPS instances and does
+  #     not store password anywhere except stdout, but if anyone gets access to the
+  #     running VPS instance, before you deleted it manually, they can read credentials
+  #     from plaintext file, so still keep this in mind.
+  #                                                                  - andrew, March 16 2021
   - "git config --global credential.helper store"
   # Clone our rumor fork with some additional scripts in this repo.
   - command: "git clone --recurse-submodules -j4 https://{username}:{password}@github.com/org404/pyrum-scripts.git"
@@ -53,13 +54,14 @@ commands:
   - command: "export FORK_DIGEST=\"{fork_digest}\""
     fork_digest: "0x3b088795"
   - command: "export FORK_DIGEST_NO_PREFIX=\"{fork_digest}\""
-    fork_digest: "3b088795"
+    fork_digest: "3b088795" # need to manually fill fork number for our current rumor script.
   #
   # Note:
   #     Running payload, sending it to the background so we finish execution immediatelly.
-  #     This has own pros/cons because we can't see what's the status on the script, so it
-  #     might easily fail silently. Maybe we could capture first N lines of logs and then
-  #     put it into the background job. Otherwise, we will need some much more complex way
-  #     to be able to monitor execution, but also disconnect anytime we need.
+  #     This is not ideal, because we can't see what's the status on the script, so it can
+  #     easily fail silently. Maybe we could capture first N lines of logs and then put it
+  #     into the background job. Otherwise, we will need some much more complex way to be
+  #     able to monitor execution, but also disconnect anytime we need (without disrupting
+  #     the running program).
   #                                                                     - andrew, March 16 2021
   - "python3 attack.py &"
