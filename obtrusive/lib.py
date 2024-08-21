@@ -5,6 +5,7 @@ from collections import defaultdict
 from pexpect import pxssh, TIMEOUT
 from queue import Queue, Empty
 import threading
+import secrets
 import pexpect
 import asyncio
 import string
@@ -98,7 +99,7 @@ class Runner:
     @staticmethod
     def gen_passwd():
         characters = string.ascii_letters + string.digits
-        return "".join(random.choice(characters) for x in range(24))
+        return "".join(secrets.choice(characters) for x in range(24))
 
     @staticmethod
     def read_config(path: str = "config.yml"):
@@ -156,9 +157,9 @@ class Runner:
                     "command": item.format(
                         **self.context
                     ),
-                    show: False,
-                    period: 1,
-                    contains: False,
+                    "show": False,
+                    "period": 1,
+                    "contains": False,
                 })
             elif isinstance(item, dict):
                 show = item.pop("show") if "show" in item else False
