@@ -36,10 +36,14 @@ commands:
   #                                                                  - andrew, March 16 2021
   - "git config --global credential.helper store"
   # Clone our rumor fork with some additional scripts in this repo.
+<<<<<<< HEAD
   - command: "git clone --recurse-submodules -j4 https://${GIT_USERNAME}@github.com/org404/pyrum-scripts.git"
     username: null
     password: null
   - command: "git config --global credential.helper store && echo \"https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com\" > ~/.git-credentials"
+=======
+  - command: "git clone --recurse-submodules -j4 https://${{GIT_USERNAME}}:${{GIT_PASSWORD}}@github.com/org404/pyrum-scripts.git"
+>>>>>>> d8a4e5e1602f1cdd8dc424e5677e731fb3c846b0
     username: null
     password: null
   - "cd pyrum-scripts/rumor"
